@@ -16,6 +16,7 @@
 #
 # This script will parse 'sudo cat /proc/net/bonding/<interface name>' and return table output for lacp related info
 
+import click
 import subprocess
 import re
 import sys
@@ -24,6 +25,30 @@ from tabulate import tabulate
 
 import vyos.opmode
 from vyos.configquery import ConfigTreeQuery
+
+
+@click.group()
+def cli():
+    """ Console interface for op mode show command """
+    pass
+
+@cli.group()
+def show():
+    """ Console interface for op mode show command """
+    pass
+
+
+@show.group()
+def interface():
+    """ Show network interface information """
+    pass
+
+
+@interface.group()
+def bounding():
+    """ Show Bonding interface information """
+    pass
+
 
 def list_to_dict(data, headers, basekey):
     data_list = {basekey: []}
@@ -34,7 +59,13 @@ def list_to_dict(data, headers, basekey):
 
     return data_list
 
+@bounding.command('lacp')
+@click.option('--raw/--no-raw', default=False, show_default=True, help='If True, returns the data in raw format.')
+@click.option('--interface', default=None, show_default=True, help='The network interface to query. If not provided, information for all interfaces is displayed.')
 def show_lacp_neighbors(raw: bool, interface: typing.Optional[str]):
+    """
+    Show LACP related info
+    """
     headers = ["Interface", "Member", "Local ID", "Remote ID"]
     data = subprocess.run(f"cat /proc/net/bonding/{interface}", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True, text=False).stdout.decode('utf-8')
     if 'Bonding Mode: IEEE 802.3ad Dynamic link aggregation' not in data:
@@ -61,7 +92,13 @@ def show_lacp_neighbors(raw: bool, interface: typing.Optional[str]):
     else:
         return tabulate(interfaces, headers)
 
+@bounding.command('detail')
+@click.option('--raw/--no-raw', default=False, show_default=True, help='If True, returns the data in raw format.')
+@click.option('--interface', default=None, show_default=True, help='The network interface to query. If not provided, information for all interfaces is displayed.')
 def show_lacp_detail(raw: bool, interface: typing.Optional[str]):
+    """
+    Show detailed bonding interface information
+    """
     headers = ["Interface", "Members", "Mode", "Rate", "System-MAC", "Hash"]
     query = ConfigTreeQuery()
 
@@ -94,10 +131,4 @@ def show_lacp_detail(raw: bool, interface: typing.Optional[str]):
         return tabulate(bondList, headers)
 
 if __name__ == '__main__':
-    try:
-        res = vyos.opmode.run(sys.modules[__name__])
-        if res:
-            print(res)
-    except (ValueError, vyos.opmode.Error) as e:
-        print(e)
-        sys.exit(1)
+    cli()
