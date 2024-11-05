@@ -35,6 +35,17 @@ def list_to_dict(data, headers, basekey):
     return data_list
 
 def show_lacp_neighbors(raw: bool, interface: typing.Optional[str]):
+    """
+    Displays information about LACP neighbors for the specified interface.
+
+    Args:
+        raw (bool): If True, returns the data in raw format.
+        interface (str, optional): The network interface to query. If not provided,
+                                   information for all interfaces is displayed.
+
+    Returns:
+        Details about LACP neighbors in either detailed or raw format.
+    """
     headers = ["Interface", "Member", "Local ID", "Remote ID"]
     data = subprocess.run(f"cat /proc/net/bonding/{interface}", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True, text=False).stdout.decode('utf-8')
     if 'Bonding Mode: IEEE 802.3ad Dynamic link aggregation' not in data:
@@ -61,7 +72,20 @@ def show_lacp_neighbors(raw: bool, interface: typing.Optional[str]):
     else:
         return tabulate(interfaces, headers)
 
+
 def show_lacp_detail(raw: bool, interface: typing.Optional[str]):
+    """
+    Displays detailed information about the LACP.
+
+    Args:
+        raw (bool): If True, returns the data in raw format.
+        interface (str, optional): The network interface to query. If not provided,
+                                   information for all interfaces is displayed.
+
+    Returns:
+        Information about the LACP settings in either detailed or raw format.
+    """
+
     headers = ["Interface", "Members", "Mode", "Rate", "System-MAC", "Hash"]
     query = ConfigTreeQuery()
 

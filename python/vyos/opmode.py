@@ -203,6 +203,17 @@ def _normalize_field_names(value):
     else:
         return value
 
+def _parse_doc(func):
+    from docstring_parser import parse_from_object
+
+    parsed = parse_from_object(func)
+    args_help = {}
+    func_description = parsed.description
+    for param in parsed.params:
+        args_help[param.arg_name] = param.description
+    return args_help, func_description
+
+
 def run(module):
     from argparse import ArgumentParser
 
@@ -212,7 +223,8 @@ def run(module):
     subparsers = parser.add_subparsers(dest="subcommand")
 
     for function_name in functions:
-        subparser = subparsers.add_parser(function_name, help=functions[function_name].__doc__)
+        args_help, func_description = _parse_doc(functions[function_name])
+        subparser = subparsers.add_parser(function_name, help=func_description)
 
         type_hints = typing.get_type_hints(functions[function_name])
         if 'return' in type_hints:
@@ -223,27 +235,28 @@ def run(module):
             # Function argument names use underscores as separators
             # but command-line options should use hyphens
             # Without this, we'd get options like "--foo_bar"
+            arg_help = args_help.get(opt)
             opt = re.sub(r'_', '-', opt)
 
             if _get_arg_type(th) == bool:
-                subparser.add_argument(f"--{opt}", action='store_true')
+                subparser.add_argument(f"--{opt}", action='store_true', help=arg_help)
             else:
                 if _is_optional_type(th):
                     if _is_literal_type(th):
                         subparser.add_argument(f"--{opt}",
                                                choices=list(_get_literal_values(th)),
-                                               default=None)
+                                               default=None, help=arg_help)
                     else:
                         subparser.add_argument(f"--{opt}",
-                                               type=_get_arg_type(th), default=None)
+                                               type=_get_arg_type(th), default=None, help=arg_help)
                 else:
                     if _is_literal_type(th):
                         subparser.add_argument(f"--{opt}",
                                                choices=list(_get_literal_values(th)),
-                                               required=True)
+                                               required=True, help=arg_help)
                     else:
                         subparser.add_argument(f"--{opt}",
-                                               type=_get_arg_type(th), required=True)
+                                               type=_get_arg_type(th), required=True, help=arg_help)
 
     # Get options as a dict rather than a namespace,
     # so that we can modify it and pack for passing to functions
